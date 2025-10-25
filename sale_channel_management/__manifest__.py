@@ -14,6 +14,7 @@
         "security/sale_channel_security.xml",
         "security/ir.model.access.csv",
         "views/sale_channel_views.xml",
+        "views/sale_order_views.xml",
     ],
     "application": True,
     "installable":True,
