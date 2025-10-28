@@ -24,3 +24,32 @@ class SaleOrder(models.Model):
         else:
             # Si se quita el canal, se limpia el campo de depósito
             self.warehouse_id = False
+
+        # --- Punto 2b (segunda mitad): Forzar que el picking use el depósito del canal ---
+    def _create_delivery_group(self):
+        """Sobrescribimos este método para asegurarnos que el grupo de entregas 
+        use el almacén correcto del canal."""
+        res = super()._create_delivery_group()
+        if self.sale_channel_id and self.procurement_group_id:
+            self.procurement_group_id.warehouse_id = self.sale_channel_id.warehouse_id
+        return res
+
+    def _create_picking(self):
+        """Asegurar que las entregas creadas hereden el canal y almacén correcto."""
+        pickings = super()._create_picking()
+        for picking in pickings:
+            picking.sale_channel_id = self.sale_channel_id.id
+            if self.sale_channel_id.warehouse_id:
+                picking.picking_type_id = self.sale_channel_id.warehouse_id.out_type_id
+        return pickings
+
+class StockPicking(models.Model):
+    _inherit = 'stock.picking'
+
+    # --- Punto 2d (parte stock): Propagar el canal de venta ---
+    sale_channel_id = fields.Many2one(
+        comodel_name='sale.channel',
+        string='Canal de Venta',
+        readonly=True,
+        help="Canal de venta desde el cual se originó esta entrega."
+    )
