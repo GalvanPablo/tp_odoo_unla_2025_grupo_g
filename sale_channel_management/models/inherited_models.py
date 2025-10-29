@@ -53,3 +53,27 @@ class StockPicking(models.Model):
         readonly=True,
         help="Canal de venta desde el cual se originó esta entrega."
     )
+    
+class AccountMove(models.Model):
+    _inherit = 'account.move'
+
+    sale_channel_id = fields.Many2one(
+        'sale.channel',
+        string='Canal de Venta',
+        readonly=True,
+        copy=False
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Cuando se crean facturas desde una orden de venta,
+        se hereda el canal y el diario del canal."""
+        moves = super().create(vals_list)
+        for move in moves:
+            if move.invoice_origin:
+                sale_order = self.env['sale.order'].search([('name', '=', move.invoice_origin)], limit=1)
+                if sale_order and sale_order.sale_channel_id:
+                    move.sale_channel_id = sale_order.sale_channel_id
+                    if sale_order.sale_channel_id.journal_id:
+                        move.journal_id = sale_order.sale_channel_id.journal_id
+        return moves
